@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+</head>
+<body>
+    <div id="myBoard" style="width: 400px"></div>
+     <script>
+        
+
+        var config = {
+            draggable: true,
+            onDrop:onDrop,
+            dropOfBoard: 'snapback',
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        }
+        var board = Chessboard('myBoard', config)
+
+        async function sendMove(source, target){
+            const url = "http://127.0.0.1:5000/move"
+            try{
+                const response = await fetch(
+                    url,
+                    {
+                        method: "POST",
+                        headers:{
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ move: source + target }),
+                    }
+                )
+                if(!response.ok){
+                    throw new Error("Response statu: ", response.status)
+                }
+                const data = await response.json()
+                board.position(data.fen)
+            }catch(error){
+                console.error(error.message)
+            }
+        }
+
+        function onDrop(source, target) {
+            sendMove(source, target)  
+            return 'snapback'         
+        }
+
+    </script>
+</body>
+</html>

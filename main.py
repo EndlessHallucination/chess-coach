@@ -13,7 +13,6 @@ while not board.is_game_over():
 
     if move == 'quit':
         break
-    
     try: 
         board.push_san(move)
     except ValueError:

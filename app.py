@@ -5,25 +5,27 @@ app = Flask(__name__)
 
 board = chess.Board()
 
-
 @app.route("/")
 def home():
+    return app.send_static_file("index.html")
+
+
+@app.route("/board")
+def show_board():
     return jsonify({
         "fen":board.fen()
     })
 
 @app.route("/move", methods=["POST"])
 def move():
-    print("move route hit")
     
     data = request.json
   
-    print("data received:", data)
     move = data.get("move")
 
     try:
 
-        board.push_san(move)
+        board.push_uci(move)
 
         return jsonify({
             "fen": board.fen(),
