@@ -16,6 +16,11 @@ def show_board():
         "fen":board.fen()
     })
 
+@app.route("/board/reset", methods=["POST"])
+def reset():
+    board.reset()
+    return jsonify({"fen": board.fen()})
+
 @app.route("/move", methods=["POST"])
 def move():
     
@@ -38,6 +43,9 @@ def move():
             "error": "illegal move",
             "status": "error"
         }), 400
+
+
+
 
 
 if __name__ == "__main__":

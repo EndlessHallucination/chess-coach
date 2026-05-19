@@ -10,9 +10,10 @@
 </head>
 <body>
     <div id="myBoard" style="width: 400px"></div>
-     <script>
-        
-
+    <p id="status"></p>     
+    <button id="resetBtn">Reset</button>   
+    <script>
+    
         var config = {
             draggable: true,
             onDrop:onDrop,
@@ -36,10 +37,12 @@
                     }
                 )
                 if(!response.ok){
-                    throw new Error("Response statu: ", response.status)
+                    throw new Error("Response status: ", response.status)
                 }
                 const data = await response.json()
                 board.position(data.fen)
+                updateStatus(data.fen)
+
             }catch(error){
                 console.error(error.message)
             }
@@ -49,6 +52,34 @@
             sendMove(source, target)  
             return 'snapback'         
         }
+
+
+       async function resetBoard(){
+            const url = "http://127.0.0.1:5000/board/reset"
+            try {
+                const response = await fetch(
+                    url,
+                    {
+                        method: "POST",
+                    }
+                )
+                 if(!response.ok){
+                    throw new Error("Response status: ", response.status)
+                }
+                const data = await response.json()
+                board.position(data.fen)
+                updateStatus(data.fen)
+            } catch (error) {
+                console.error(error.message)
+            }
+        }
+    
+    function updateStatus(fen){
+        const turn = fen.split(' ')[1]
+        document.getElementById('status').innerText = turn == 'w' ? 'White to move' : 'Black to move'
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', resetBoard)
 
     </script>
 </body>
