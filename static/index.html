@@ -16,6 +16,9 @@
     <div id="hintDisplay">
        
     </div> 
+    <div id="analysisDisplay">
+
+    </div>
 
     <script>
     
@@ -47,19 +50,22 @@
                 const data = await response.json()
                 board.position(data.fen)
                 updateStatus(data.fen)
+                const turn = data.fen.split(' ')[1]
+                const color = turn === 'w' ? 'black' : 'white'
+                
+                analyzeMove(source + target, data.fen, color)
 
             }catch(error){
                 console.error(error.message)
             }
         }
 
-        function onDrop(source, target) {
+    function onDrop(source, target) {
             sendMove(source, target)  
             return 'snapback'         
         }
 
-
-       async function resetBoard(){
+    async function resetBoard(){
             const url = "http://127.0.0.1:5000/board/reset"
             try {
                 const response = await fetch(
@@ -111,8 +117,36 @@
         } finally {
             document.getElementById('hintBtn').disabled = false
             document.getElementById('hintBtn').innerText = 'Get Hint'
+        }
+
 }
 
+    async function analyzeMove(move, fen, color) {
+        const url = "http://127.0.0.1:5000/board/analyze"
+        try {
+            const response = await fetch(url, 
+                {
+                    method:"POST",
+                    headers:
+                    {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ move: move, fen: fen, color: color })
+                }
+                
+            )
+            if(!response.ok){
+                throw new Error("Response status: ", response.status)
+            }
+            const data = await response.json()
+            
+            document.getElementById('analysisDisplay').innerText = data.response
+
+
+        } catch (error) {
+            console.error(error.message)
+        
+        }
     }
 
     document.getElementById('resetBtn').addEventListener('click', resetBoard)

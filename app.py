@@ -45,6 +45,8 @@ def move():
             "status": "error"
         }), 400
 
+
+
 @app.route("/board/hint", methods=["POST"])
 def get_hint():
 
@@ -110,7 +112,73 @@ def get_hint():
             "error": "Could not connect to Ollama"
         }), 500
 
-  
+@app.route("/board/analyze", methods=["POST"])
+def analyze_board():
+    url = "http://localhost:11434/api/generate"
+
+    try:
+        data = request.json
+
+        move = data.get("move")
+        fen = data.get("fen")
+        color = data.get("color")
+
+
+        prompt = f"""
+        You are a chess coach AI.
+        A player has just made a move in a chess game.
+        Analyze ONLY the move that was just played, based on the current board position after the move.
+        You will receive:
+        The move played in UCI format (example: e2e4)
+        The current FEN position after the move
+        The color of the player who made the move ("white" or "black")
+        Your task:
+        Explain what the move does strategically or tactically
+        Mention whether it improves development, controls the center, attacks something, defends something, etc.
+        If the move has a weakness or mistake, explain it briefly
+        Keep the explanation beginner-friendly and concise
+        Do NOT suggest future moves unless necessary for explaining the idea
+        Do NOT analyze the entire game
+        Focus only on the move that was just played
+        Move: {move}
+        Color: {color}
+        FEN: {fen}
+        FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1
+        Example style of response:
+        "e4 is a strong opening move that controls the center and opens lines for the queen and bishop. It helps White develop pieces actively and fight for space early in the game."
+
+        Respond ONLY in valid JSON using this format:
+
+        {{
+        "response": "...",
+        }}
+        """
+
+        payload = {
+        "model": "llama3.2",
+        "prompt": prompt,
+        "stream": False
+    }
+        response = requests.post(url, json=payload)
+        ollama_data = response.json()
+        
+        return jsonify({"response": ollama_data["response"]})
+
+
+    except Exception:
+        return jsonify({
+            "status": "error",
+            "error": "Could not connect to Ollama"
+        }), 500
+    
+    
+
+    
+
+        
+
+
+
 
 
 
