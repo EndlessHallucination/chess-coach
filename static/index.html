@@ -12,6 +12,11 @@
     <div id="myBoard" style="width: 400px"></div>
     <p id="status"></p>     
     <button id="resetBtn">Reset</button>   
+    <button id="hintBtn">Get Hint</button>  
+    <div id="hintDisplay">
+       
+    </div> 
+
     <script>
     
         var config = {
@@ -63,7 +68,7 @@
                         method: "POST",
                     }
                 )
-                 if(!response.ok){
+                if(!response.ok){
                     throw new Error("Response status: ", response.status)
                 }
                 const data = await response.json()
@@ -79,7 +84,39 @@
         document.getElementById('status').innerText = turn == 'w' ? 'White to move' : 'Black to move'
     }
 
+    async function getHint(){
+        const url = "http://127.0.0.1:5000/board/hint"
+        document.getElementById('hintBtn').disabled = true
+        document.getElementById('hintBtn').innerText = 'Thinking...'    
+        try {
+            const response = await fetch(url, 
+                {
+                    method:"POST",
+                    headers:
+                    {
+                        'Content-Type': 'application/json'
+                    },
+                }
+                
+            )
+            if(!response.ok){
+                throw new Error("Response status: ", response.status)
+            }
+            const data = await response.json()
+            
+            document.getElementById('hintDisplay').innerText = data.hint
+
+        } catch (error) {
+            console.error(error.message)
+        } finally {
+            document.getElementById('hintBtn').disabled = false
+            document.getElementById('hintBtn').innerText = 'Get Hint'
+}
+
+    }
+
     document.getElementById('resetBtn').addEventListener('click', resetBoard)
+    document.getElementById('hintBtn').addEventListener('click', getHint)
 
     </script>
 </body>
