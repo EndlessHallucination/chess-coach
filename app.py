@@ -149,10 +149,33 @@ def analyze_board():
         }), 500
     
     
-
-    
-
-        
+def fen_to_english(fen):
+    turn_part = fen.split(" ")[1]
+    turn = "White" if turn_part == "w" else "Black"
+    files = "abcdefgh"
+    pieces = {"p": "pawn", "n": "knight", "b": "bishop", "r": "rook", "q": "queen", "k": "king"}
+    board_part = fen.split(" ")[0]
+    white = []
+    black = []
+    file = 0
+    rank = 7
+    for char in board_part:
+        if char == "/":
+            file = 0
+            rank -= 1
+        elif char.isdigit():
+            file += int(char)
+        else:
+            if char.islower():
+               square = files[file] + str(rank+1)
+               piece = pieces[char.lower()]
+               black.append(piece + " on " + square)
+            else: 
+               square = files[file] + str(rank + 1)
+               piece = pieces[char.lower()]
+               white.append(piece + " on " + square)
+            file += 1
+    return f"It is {turn}'s turn.\nWhite pieces: {', '.join(white)}\nBlack pieces: {', '.join(black)}" 
 
 
 
