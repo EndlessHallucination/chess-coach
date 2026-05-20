@@ -14,8 +14,11 @@
     <button id="resetBtn">Reset</button>   
     <button id="hintBtn">Get Hint</button>  
     <div id="hintDisplay">
-       
-    </div> 
+        <p id="hintText"></p>
+        <p id="hintConcepts"></p>
+        <p id="hintBestMove"></p>
+        <p id="hintExplanation"></p>
+    </div>
     <div id="analysisDisplay">
 
     </div>
@@ -109,8 +112,14 @@
                 throw new Error("Response status: ", response.status)
             }
             const data = await response.json()
+            const hint = parseHint(data.hint)
             
-            document.getElementById('hintDisplay').innerText = data.hint
+            document.getElementById('hintText').innerText = hint.hint
+            document.getElementById('hintConcepts').innerText = hint.concepts
+            document.getElementById('hintBestMove').innerText = hint.bestMove
+            document.getElementById('hintExplanation').innerText = hint.explanation
+
+
 
         } catch (error) {
             console.error(error.message)
@@ -119,9 +128,21 @@
             document.getElementById('hintBtn').innerText = 'Get Hint'
         }
 
-}
+    }
+
+    function parseHint(text){
+        const parts = text.split(/HINT:|CONCEPTS:|BEST MOVE:|EXPLANATION:/)
+        return {
+            hint: parts[1]?.trim() || '',
+            concepts: parts[2]?.trim() || '',
+            bestMove: parts[3]?.trim() || '',
+            explanation: parts[4]?.trim() || ''
+        }
+        
+    }
 
     async function analyzeMove(move, fen, color) {
+        document.getElementById('analysisDisplay').innerText = 'Analyzing your move...' 
         const url = "http://127.0.0.1:5000/board/analyze"
         try {
             const response = await fetch(url, 
@@ -148,6 +169,8 @@
         
         }
     }
+
+    
 
     document.getElementById('resetBtn').addEventListener('click', resetBoard)
     document.getElementById('hintBtn').addEventListener('click', getHint)

@@ -53,43 +53,24 @@ def get_hint():
     url = "http://localhost:11434/api/generate"
 
     prompt = f"""
-        You are a friendly chess coach helping a beginner improve.
+      You are a chess coach helping a beginner. Be brief and clear.
 
-        Current board position in FEN:
-        {board.fen()}
+    Current position FEN: {board.fen()}
 
-        Your job is NOT to simply give the best move immediately.
+    Respond using EXACTLY this format with no deviations:
+    HINT: [one sentence]
+    CONCEPTS: [one sentence]
+    BEST MOVE: [just the move like e4 or Nf3, nothing else] 
+    EXPLANATION: [two sentences]
 
-        Instead:
-        1. Briefly describe the current position.
-        2. Explain important ideas in the position:
-        - king safety
-        - development
-        - center control
-        - piece activity
-        - tactical threats
-        3. Give 2-3 candidate moves the player should consider.
-        4. Explain the pros and cons of each move.
-        5. Give a coaching-style hint first.
-        6. Only after the explanation, recommend the strongest move.
-        7. Keep explanations simple and educational.
-        8. Encourage the player to think instead of just memorizing moves.
-
-        Respond ONLY in valid JSON using this format:
-
-        {{
-        "hint": "...",
-        "concepts": "...",
-        "candidate_moves": [
-            {{
-            "move": "...",
-            "idea": "..."
-            }}
-        ],
-        "best_move": "...",
-        "explanation": "..."
-        }}
-        """
+    Do not add any other text before or after.
+        
+    Example response:
+    HINT: Develop your knights before bishops.
+    CONCEPTS: Piece development is the priority in the opening.
+    BEST MOVE: Nf3
+    EXPLANATION: Nf3 develops a piece toward the center. It also prepares for castling kingside.
+    """
 
     payload = {
         "model": "llama3.2",
@@ -102,7 +83,7 @@ def get_hint():
 
         response = requests.post(url, json=payload)
         data = response.json()
-
+        
         return jsonify({"hint": data["response"]})
 
     except Exception:
@@ -147,11 +128,7 @@ def analyze_board():
         Example style of response:
         "e4 is a strong opening move that controls the center and opens lines for the queen and bishop. It helps White develop pieces actively and fight for space early in the game."
 
-        Respond ONLY in valid JSON using this format:
-
-        {{
-        "response": "...",
-        }}
+        Respond ONLY in valid plain text format
         """
 
         payload = {
@@ -162,7 +139,7 @@ def analyze_board():
         response = requests.post(url, json=payload)
         ollama_data = response.json()
         
-        return jsonify({"response": ollama_data["response"]})
+        return {"response": ollama_data["response"]}
 
 
     except Exception:
