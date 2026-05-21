@@ -1,205 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Coach</title>
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/main.js" defer></script>
 </head>
 <body>
-    <div id="myBoard" style="width: 400px"></div>
-    <select id="playingAs">
+
+<div id="app">
+
+  <!-- ── Board column ── -->
+  <div id="board-col">
+
+    <div id="status-bar">
+      <div id="turn-dot"></div>
+      <span id="status">White to move</span>
+    </div>
+
+    <div id="board-wrap">
+      <div id="myBoard"></div>
+    </div>
+
+    <div id="playing-as-row">
+      <label for="playingAs">Playing as</label>
+      <select id="playingAs">
         <option value="both">Both sides</option>
         <option value="white">White</option>
         <option value="black">Black</option>
-    </select>
-    <p id="status"></p>     
-    <button id="resetBtn">Reset</button>   
-    <button id="flipBtn">Flip the Board</button>   
-    <button id="hintBtn">Get Hint</button>  
-    <div id="hintDisplay">
-        <p id="hintText"></p>
-        <p id="hintConcepts"></p>
-        <p id="hintBestMove"></p>
-        <p id="hintExplanation"></p>
+      </select>
     </div>
-    <button id="analyzeBtn">Analyze Last Move</button>
-    <div id="analysisDisplay"></div>
 
-    <script>
-    
-        var config = {
-            draggable: true,
-            onDrop:onDrop,
-            dropOfBoard: 'snapback',
-            position: 'start',
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-        }
-        var board = Chessboard('myBoard', config)
+    <div id="btn-row">
+      <button id="resetBtn">Reset</button>
+      <button id="flipBtn">Flip</button>
+      <button id="hintBtn">Get Hint</button>
+    </div>
 
-    let lastMove = null
+  </div>
 
-   
+  <!-- ── Coach column ── -->
+  <div id="coach-col">
 
-    async function sendMove(source, target){
-            const url = "http://127.0.0.1:5000/move"
-            try{
-                const response = await fetch(
-                    url,
-                    {
-                        method: "POST",
-                        headers:{
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ move: source + target }),
-                    }
-                )
-                if(!response.ok){
-                    throw new Error("Response status: ", response.status)
-                }
-                const data = await response.json()
-                board.position(data.fen)
-                updateStatus(data.fen)
-                const turn = data.fen.split(' ')[1]
-                const color = turn === 'w' ? 'black' : 'white'
-                lastMove = { move: source + target, fen: data.fen, color: color }
+    <!-- Hint section -->
+    <div class="coach-section">
+      <div class="section-label">Hint</div>
+      <div class="hint-grid">
 
+        <div class="hint-field">
+          <span class="hint-field-label">Hint</span>
+          <span class="hint-field-value" id="hintText">—</span>
+        </div>
 
-            }catch(error){
-                console.error(error.message)
-            }
-        }
+        <div class="hint-field">
+          <span class="hint-field-label">Concepts</span>
+          <span class="hint-field-value" id="hintConcepts">—</span>
+        </div>
 
-    function onDrop(source, target) {
-            sendMove(source, target)  
-            return 'snapback'         
-        }
+        <div class="hint-field" id="hintBestMoveField">
+          <span class="hint-field-label">Best Move</span>
+          <span class="hint-field-value" id="hintBestMove">—</span>
+        </div>
 
-    async function resetBoard(){
-            const url = "http://127.0.0.1:5000/board/reset"
-            try {
-                const response = await fetch(
-                    url,
-                    {
-                        method: "POST",
-                    }
-                )
-                if(!response.ok){
-                    throw new Error("Response status: ", response.status)
-                }
-                const data = await response.json()
-                board.position(data.fen)
-                updateStatus(data.fen)
-            } catch (error) {
-                console.error(error.message)
-            }
-        }
-    
-    function updateStatus(fen){
-        const turn = fen.split(' ')[1]
-        document.getElementById('status').innerText = turn == 'w' ? 'White to move' : 'Black to move'
-    }
+        <div class="hint-field">
+          <span class="hint-field-label">Explanation</span>
+          <span class="hint-field-value" id="hintExplanation">—</span>
+        </div>
 
-    async function getHint(){
-        const url = "http://127.0.0.1:5000/board/hint"
-        document.getElementById('hintBtn').disabled = true
-        document.getElementById('hintBtn').innerText = 'Thinking...'    
-        try {
-            const response = await fetch(url, 
-                {
-                    method:"POST",
-                    headers:
-                    {
-                        'Content-Type': 'application/json'
-                    },
-                }
-                
-            )
-            if(!response.ok){
-                throw new Error("Response status: ", response.status)
-            }
-            const data = await response.json()
-            const hint = parseHint(data.hint)
-            
-            document.getElementById('hintText').innerText = hint.hint
-            document.getElementById('hintConcepts').innerText = hint.concepts
-            document.getElementById('hintBestMove').innerText = hint.bestMove
-            document.getElementById('hintExplanation').innerText = hint.explanation
+      </div>
+    </div>
 
+    <!-- Analysis section -->
+    <div class="coach-section">
+      <div class="section-label">Analysis</div>
+      <div class="analysis-section">
+        <div id="analysisDisplay">—</div>
+        <button id="analyzeBtn">Analyze Last Move</button>
+      </div>
+    </div>
 
+  </div>
 
-        } catch (error) {
-            console.error(error.message)
-        } finally {
-            document.getElementById('hintBtn').disabled = false
-            document.getElementById('hintBtn').innerText = 'Get Hint'
-        }
+</div>
 
-    }
-
-    function parseHint(text){
-        const parts = text.split(/HINT:|CONCEPTS:|BEST MOVE:|EXPLANATION:/)
-        return {
-            hint: parts[1]?.trim() || '',
-            concepts: parts[2]?.trim() || '',
-            bestMove: parts[3]?.trim() || '',
-            explanation: parts[4]?.trim() || ''
-        }
-        
-    }
-
-    let analyzing = false
-
-    async function analyzeMove(move, fen, color) {
-        
-        const url = "http://127.0.0.1:5000/board/analyze"
-        if(analyzing) return
-        analyzing = true
-        document.getElementById('analysisDisplay').innerText = 'Analyzing your move...'
-        
-        try {
-            const response = await fetch(url, 
-                {
-                    method:"POST",
-                    headers:
-                    {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ move: move, fen: fen, color: color })
-                }
-                
-            )
-            if(!response.ok){
-                throw new Error("Response status: ", response.status)
-            }
-            const data = await response.json()
-            
-            document.getElementById('analysisDisplay').innerText = data.response
-
-
-        } catch (error) {
-            console.error(error.message)
-        } finally {
-                analyzing = false
-        }
-    }
-
-    function flipBoard(){
-        board.flip()
-    }
-    
-
-    document.getElementById('resetBtn').addEventListener('click', resetBoard)
-    document.getElementById('flipBtn').addEventListener('click', flipBoard)
-    document.getElementById('hintBtn').addEventListener('click', getHint)
-    document.getElementById('analyzeBtn').addEventListener('click', () => {
-        if(!lastMove) return
-        const playingAs = document.getElementById('playingAs').value
-        if(playingAs !== 'both' && lastMove.color !== playingAs) return
-        analyzeMove(lastMove.move, lastMove.fen, lastMove.color)
-    })
-    </script>
 </body>
 </html>

@@ -1,0 +1,247 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #1a1a1a;
+  --panel: #242424;
+  --coach: #2a2a2a;
+  --border: #333;
+  --divider: #2f2f2f;
+  --text: #b0b0b0;
+  --text-bright: #e8e8e8;
+  --text-dim: #6a6a6a;
+  --btn-bg: #2e2e2e;
+  --btn-border: #404040;
+  --btn-hover: #383838;
+  --accent: #ffffff;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* ── App shell ── */
+#app {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  max-width: 1000px;
+  align-items: flex-start;
+}
+
+/* ── Board column (60%) ── */
+#board-col {
+  flex: 0 0 60%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Status badge */
+#status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+}
+
+#turn-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  flex-shrink: 0;
+  border: 1px solid #555;
+}
+
+#turn-dot.black {
+  background: #1a1a1a;
+  border-color: #888;
+}
+
+#status {
+  font-size: 13px;
+  color: var(--text-bright);
+  letter-spacing: 0.01em;
+}
+
+/* Board wrapper */
+#board-wrap {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+#myBoard {
+  width: 100% !important;
+}
+
+/* Playing-as select */
+#playing-as-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#playing-as-row label {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+#playingAs {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text-bright);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+  flex: 1;
+}
+
+#playingAs:hover {
+  background: var(--btn-hover);
+}
+
+/* Buttons row */
+#btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text-bright);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 7px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  outline: none;
+  transition: background 0.12s;
+}
+
+button:hover {
+  background: var(--btn-hover);
+}
+
+button:active {
+  background: #3a3a3a;
+}
+
+#resetBtn,
+#flipBtn,
+#hintBtn {
+  flex: 1;
+}
+
+/* ── Coach column (40%) ── */
+#coach-col {
+  flex: 0 0 40%;
+  background: var(--coach);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shared section styles */
+.coach-section {
+  padding: 16px 18px;
+}
+
+.coach-section + .coach-section {
+  border-top: 1px solid var(--divider);
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+/* ── Hint section ── */
+.hint-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hint-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hint-field-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hint-field-value {
+  font-size: 13px;
+  color: var(--text);
+  min-height: 18px;
+}
+
+#hintBestMove {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Analysis section ── */
+.analysis-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#analysisDisplay {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 80px;
+  white-space: pre-wrap;
+}
+
+#analyzeBtn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* ── Chessboard overrides ── */
+.board-b72b1 {
+  border: none !important;
+  box-shadow: none !important;
+}
