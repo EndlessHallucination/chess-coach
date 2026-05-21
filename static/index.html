@@ -10,8 +10,14 @@
 </head>
 <body>
     <div id="myBoard" style="width: 400px"></div>
+    <select id="playingAs">
+        <option value="both">Both sides</option>
+        <option value="white">White</option>
+        <option value="black">Black</option>
+    </select>
     <p id="status"></p>     
     <button id="resetBtn">Reset</button>   
+    <button id="flipBtn">Flip the Board</button>   
     <button id="hintBtn">Get Hint</button>  
     <div id="hintDisplay">
         <p id="hintText"></p>
@@ -19,9 +25,8 @@
         <p id="hintBestMove"></p>
         <p id="hintExplanation"></p>
     </div>
-    <div id="analysisDisplay">
-
-    </div>
+    <button id="analyzeBtn">Analyze Last Move</button>
+    <div id="analysisDisplay"></div>
 
     <script>
     
@@ -34,7 +39,11 @@
         }
         var board = Chessboard('myBoard', config)
 
-        async function sendMove(source, target){
+    let lastMove = null
+
+   
+
+    async function sendMove(source, target){
             const url = "http://127.0.0.1:5000/move"
             try{
                 const response = await fetch(
@@ -55,8 +64,8 @@
                 updateStatus(data.fen)
                 const turn = data.fen.split(' ')[1]
                 const color = turn === 'w' ? 'black' : 'white'
-                
-                analyzeMove(source + target, data.fen, color)
+                lastMove = { move: source + target, fen: data.fen, color: color }
+
 
             }catch(error){
                 console.error(error.message)
@@ -141,9 +150,15 @@
         
     }
 
+    let analyzing = false
+
     async function analyzeMove(move, fen, color) {
-        document.getElementById('analysisDisplay').innerText = 'Analyzing your move...' 
+        
         const url = "http://127.0.0.1:5000/board/analyze"
+        if(analyzing) return
+        analyzing = true
+        document.getElementById('analysisDisplay').innerText = 'Analyzing your move...'
+        
         try {
             const response = await fetch(url, 
                 {
@@ -166,15 +181,25 @@
 
         } catch (error) {
             console.error(error.message)
-        
+        } finally {
+                analyzing = false
         }
     }
 
+    function flipBoard(){
+        board.flip()
+    }
     
 
     document.getElementById('resetBtn').addEventListener('click', resetBoard)
+    document.getElementById('flipBtn').addEventListener('click', flipBoard)
     document.getElementById('hintBtn').addEventListener('click', getHint)
-
+    document.getElementById('analyzeBtn').addEventListener('click', () => {
+        if(!lastMove) return
+        const playingAs = document.getElementById('playingAs').value
+        if(playingAs !== 'both' && lastMove.color !== playingAs) return
+        analyzeMove(lastMove.move, lastMove.fen, lastMove.color)
+    })
     </script>
 </body>
 </html>

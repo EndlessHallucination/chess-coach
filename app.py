@@ -55,7 +55,7 @@ def get_hint():
     prompt = f"""
       You are a chess coach helping a beginner. Be brief and clear.
 
-    Current position FEN: {board.fen()}
+    Current position FEN:  {fen_to_english(board.fen())}
 
     Respond using EXACTLY this format with no deviations:
     HINT: [one sentence]
@@ -73,7 +73,7 @@ def get_hint():
     """
 
     payload = {
-        "model": "llama3.2",
+        "model": "mistral",
         "prompt": prompt,
         "stream": False
     }
@@ -101,7 +101,7 @@ def analyze_board():
         data = request.json
 
         move = data.get("move")
-        fen = data.get("fen")
+        fen = fen_to_english(board.fen())
         color = data.get("color")
 
 
@@ -124,7 +124,6 @@ def analyze_board():
         Move: {move}
         Color: {color}
         FEN: {fen}
-        FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1
         Example style of response:
         "e4 is a strong opening move that controls the center and opens lines for the queen and bishop. It helps White develop pieces actively and fight for space early in the game."
 
@@ -132,7 +131,7 @@ def analyze_board():
         """
 
         payload = {
-        "model": "llama3.2",
+        "model": "mistral",
         "prompt": prompt,
         "stream": False
     }
