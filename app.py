@@ -22,6 +22,15 @@ def reset():
     board.reset()
     return jsonify({"fen": board.fen()})
 
+@app.route("/board/history", methods=["GET"])
+def history():
+    temp_board = chess.Board()
+    moves = []
+    for move in board.move_stack:
+        moves.append(temp_board.san(move))
+        temp_board.push(move)
+    return jsonify({"moves": moves})
+
 @app.route("/move", methods=["POST"])
 def move():
     
@@ -44,7 +53,6 @@ def move():
             "error": "illegal move",
             "status": "error"
         }), 400
-
 
 
 @app.route("/board/hint", methods=["POST"])
@@ -175,10 +183,6 @@ def fen_to_english(fen):
                white.append(piece + " on " + square)
             file += 1
     return f"It is {turn}'s turn.\nWhite pieces: {', '.join(white)}\nBlack pieces: {', '.join(black)}" 
-
-
-
-
 
 
 if __name__ == "__main__":

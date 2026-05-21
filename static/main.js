@@ -28,6 +28,7 @@ async function sendMove(source, target) {
         const turn = data.fen.split(' ')[1]
         const color = turn === 'w' ? 'black' : 'white'
         lastMove = { move: source + target, fen: data.fen, color: color }
+        updateHistory()
     } catch (error) {
         console.error(error.message)
     }
@@ -53,6 +54,7 @@ async function resetBoard() {
         setHintField('hintBestMove', '—')
         setHintField('hintExplanation', '—')
         document.getElementById('analysisDisplay').innerText = '—'
+        updateHistory()
     } catch (error) {
         console.error(error.message)
     }
@@ -133,6 +135,27 @@ function flipBoard() {
     board.flip()
 }
 
+async function updateHistory(){
+const url = "http://127.0.0.1:5000/board/history"
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: { 'Content-Type': 'application/json' },
+        })
+        if (!response.ok) throw new Error("Response status: " + response.status)
+        const data = await response.json()
+    moveString = ""
+    for (let i = 0; i < data.moves.length; i += 2) {
+    const white = data.moves[i]
+    const black = data.moves[i + 1] || ''
+    const moveNum = (i / 2) + 1
+    moveString += `${moveNum}. ${white} ${black}  `
+    }
+    document.getElementById('moveHistory').innerText = moveString
+    } catch (error) {
+        console.error(error.message)
+    }
+}
 
 document.getElementById('resetBtn').addEventListener('click', resetBoard)
 document.getElementById('flipBtn').addEventListener('click', flipBoard)
