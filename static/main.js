@@ -26,6 +26,7 @@ async function sendMove(source, target) {
         board.position(data.fen)
         updateStatus(data.fen)
         const turn = data.fen.split(' ')[1]
+        checkGameStatus()
         const color = turn === 'w' ? 'black' : 'white'
         lastMove = { move: source + target, fen: data.fen, color: color }
         updateHistory()
@@ -55,6 +56,7 @@ async function resetBoard() {
         setHintField('hintExplanation', '—')
         document.getElementById('analysisDisplay').innerText = '—'
         updateHistory()
+        board.draggable = true
     } catch (error) {
         console.error(error.message)
     }
@@ -172,6 +174,46 @@ async function undoMove() {
      } catch (error) {
         console.error(error.message)
      }
+}
+
+async function checkGameStatus() {
+    const url = "http://127.0.0.1:5000/board/status"
+
+    try {
+        const response = await fetch(url, {
+            method: "GET"
+        })
+
+        if (!response.ok) {
+            throw new Error("Response status: " + response.status)
+        }
+
+        const data = await response.json()
+
+        const statusDiv = document.getElementById("gameStatus")
+
+        if (data.checkmate) {
+            const winner = data.turn === "white" ? "Black" : "White"
+            statusDiv.textContent = `Checkmate! ${winner} wins!`
+        }
+        else if (data.stalemate) {
+            statusDiv.textContent = "Draw by stalemate!"
+        }
+        else if (data.check) {
+            const color = data.turn === "white" ? "Black" : "White"
+            statusDiv.textContent = `${color} Checked!`
+        }
+        else {
+            statusDiv.textContent = ""
+        }
+
+        if (data.game_over) {
+            board.draggable = false
+        }
+
+    } catch (error) {
+        console.error("Error checking game status:", error)
+    }
 }
 
 

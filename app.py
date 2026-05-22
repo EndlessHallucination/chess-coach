@@ -10,12 +10,25 @@ board = chess.Board()
 def home():
     return app.send_static_file("index.html")
 
-
 @app.route("/board")
 def show_board():
     return jsonify({
         "fen":board.fen()
     })
+
+@app.route("/board/status")
+def check_status():
+    checkmate = board.is_checkmate()
+    stalemate = board.is_stalemate()
+    check = board.is_check()
+    game_over = board.is_game_over()
+    return jsonify({
+    "checkmate": checkmate,
+    "stalemate": stalemate,
+    "check": check,
+    "game_over": game_over,
+    "turn": "white" if board.turn == chess.WHITE else "black"
+})
 
 @app.route("/board/reset", methods=["POST"])
 def reset():
@@ -53,7 +66,6 @@ def move():
             "error": "illegal move",
             "status": "error"
         }), 400
-
 
 @app.route("/board/hint", methods=["POST"])
 def get_hint():
