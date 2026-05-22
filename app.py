@@ -1,7 +1,9 @@
 from flask import Flask, jsonify, request
 import chess
 import requests
+from stockfish import Stockfish
 
+sf = Stockfish(path="/opt/homebrew/bin/stockfish")
 app = Flask(__name__)
 
 board = chess.Board()
@@ -71,6 +73,8 @@ def move():
 def get_hint():
 
     url = "http://localhost:11434/api/generate"
+    sf.set_fen_position(board.fen())
+    best_move = sf.get_best_move()
 
     prompt = f"""
       You are a chess coach helping a beginner. Be brief and clear.
@@ -78,9 +82,11 @@ def get_hint():
     Current position FEN:  {fen_to_english(board.fen())}
 
     Respond using EXACTLY this format with no deviations:
+    The objectively best move according to engine analysis is: {best_move}
+    Explain WHY this move is best in beginner-friendly terms.
     HINT: [one sentence]
     CONCEPTS: [one sentence]
-    BEST MOVE: [just the move like e4 or Nf3, nothing else] 
+    BEST MOVE: {best_move}
     EXPLANATION: [two sentences]
 
     Do not add any other text before or after.
@@ -203,6 +209,7 @@ def fen_to_english(fen):
                white.append(piece + " on " + square)
             file += 1
     return f"It is {turn}'s turn.\nWhite pieces: {', '.join(white)}\nBlack pieces: {', '.join(black)}" 
+
 
 
 if __name__ == "__main__":
