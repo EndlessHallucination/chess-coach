@@ -146,10 +146,10 @@ const url = "http://127.0.0.1:5000/board/history"
         const data = await response.json()
     moveString = ""
     for (let i = 0; i < data.moves.length; i += 2) {
-    const white = data.moves[i]
-    const black = data.moves[i + 1] || ''
-    const moveNum = (i / 2) + 1
-    moveString += `${moveNum}. ${white} ${black}  `
+        const white = data.moves[i]
+        const black = data.moves[i + 1] || ''
+        const moveNum = (i / 2) + 1
+        moveString += `${moveNum}. ${white} ${black}  `
     }
     document.getElementById('moveHistory').innerText = moveString
     } catch (error) {
@@ -157,9 +157,28 @@ const url = "http://127.0.0.1:5000/board/history"
     }
 }
 
+async function undoMove() {
+     const url = "http://127.0.0.1:5000/board/undo"
+     try {
+        const response = await fetch(url, {method: "POST"})
+        if (!response.ok) throw new Error("Response status: " + response.status)
+        const data = await response.json()
+        board.position(data.fen)
+        updateStatus(data.fen)
+        updateHistory()
+        const turn = data.fen.split(' ')[1]
+        const color = turn === 'w' ? 'black' : 'white'
+        lastMove = { move: null, fen: data.fen, color: color }
+     } catch (error) {
+        console.error(error.message)
+     }
+}
+
+
 document.getElementById('resetBtn').addEventListener('click', resetBoard)
 document.getElementById('flipBtn').addEventListener('click', flipBoard)
 document.getElementById('hintBtn').addEventListener('click', getHint)
+document.getElementById('undoBtn').addEventListener('click', undoMove)
 document.getElementById('analyzeBtn').addEventListener('click', () => {
     if (!lastMove) return
     const playingAs = document.getElementById('playingAs').value

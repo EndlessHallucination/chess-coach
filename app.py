@@ -155,7 +155,15 @@ def analyze_board():
             "error": "Could not connect to Ollama"
         }), 500
     
-    
+@app.route("/board/undo", methods=["POST"])
+def undo_move():
+    if len(board.move_stack) == 0:
+        return jsonify({"error": "no moves to undo"}), 400
+    board.pop()
+    return jsonify({
+        "fen":board.fen()
+    })
+
 def fen_to_english(fen):
     turn_part = fen.split(" ")[1]
     turn = "White" if turn_part == "w" else "Black"
