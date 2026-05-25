@@ -8,34 +8,138 @@ app = Flask(__name__)
 
 board = chess.Board()
 
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def fen_to_english(fen):
+    """Convert FEN to a plain-English piece list. Fixed rank calculation."""
+    files = "abcdefgh"
+    pieces = {
+        "p": "pawn", "n": "knight", "b": "bishop",
+        "r": "rook",  "q": "queen",  "k": "king"
+    }
+    board_part = fen.split(" ")[0]
+    turn_part  = fen.split(" ")[1]
+    turn = "White" if turn_part == "w" else "Black"
+
+    white, black = [], []
+    file = 0
+    rank = 7  # rank 7 = row '8' on the board (FEN starts from rank 8)
+
+    for char in board_part:
+        if char == "/":
+            file = 0
+            rank -= 1
+        elif char.isdigit():
+            file += int(char)
+        else:
+            # rank is 0-indexed here; rank 0 = rank '1', rank 7 = rank '8'
+            square = files[file] + str(rank + 1)
+            piece  = pieces[char.lower()]
+            if char.islower():
+                black.append(f"{piece} on {square}")
+            else:
+                white.append(f"{piece} on {square}")
+            file += 1
+
+    return (
+        f"It is {turn}'s turn.\n"
+        f"White pieces: {', '.join(white) or 'none'}\n"
+        f"Black pieces: {', '.join(black) or 'none'}"
+    )
+
+
+def position_context(b: chess.Board) -> str:
+    """Compact position string: move number + FEN + English layout."""
+    fen = b.fen()
+    return (
+        f"Move {b.fullmove_number}.\n"
+        f"FEN: {fen}\n"
+        f"{fen_to_english(fen)}"
+    )
+
+
+def get_recent_moves(b: chess.Board, n: int = 6) -> str:
+    """
+    Return the last n half-moves formatted as chess notation with move numbers.
+    Example: "8. Nf3 Nc6  9. Bb5 a6"
+    """
+    temp = chess.Board()
+    numbered = []  # list of (move_number, color, san)
+
+    for i, move in enumerate(b.move_stack):
+        san        = temp.san(move)
+        move_num   = (i // 2) + 1
+        color      = "white" if i % 2 == 0 else "black"
+        numbered.append((move_num, color, san))
+        temp.push(move)
+
+    recent = numbered[-n:] if numbered else []
+    if not recent:
+        return "opening — no moves yet"
+
+    # Group into pairs for display
+    parts = []
+    i = 0
+    while i < len(recent):
+        num, col, san = recent[i]
+        if col == "white":
+            white_san = san
+            black_san = recent[i + 1][2] if i + 1 < len(recent) else "..."
+            parts.append(f"{num}. {white_san} {black_san}")
+            i += 2
+        else:
+            # Starts mid-pair (e.g. after undo)
+            parts.append(f"{num}... {san}")
+            i += 1
+
+    return "  ".join(parts)
+
+
+def ollama_post(prompt: str, temperature: float = 0.3) -> dict:
+    """Single place to call Ollama so options stay consistent everywhere."""
+    url = "http://localhost:11434/api/generate"
+    payload = {
+        "model": "mistral",
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "num_ctx": 4096,
+            "temperature": temperature,
+        }
+    }
+    response = requests.post(url, json=payload)
+    return response.json()
+
+
+# ── routes ───────────────────────────────────────────────────────────────────
+
 @app.route("/")
 def home():
     return app.send_static_file("index.html")
 
+
 @app.route("/board")
 def show_board():
-    return jsonify({
-        "fen":board.fen()
-    })
+    return jsonify({"fen": board.fen()})
+
 
 @app.route("/board/status")
 def check_status():
-    checkmate = board.is_checkmate()
-    stalemate = board.is_stalemate()
-    check = board.is_check()
-    game_over = board.is_game_over()
     return jsonify({
-    "checkmate": checkmate,
-    "stalemate": stalemate,
-    "check": check,
-    "game_over": game_over,
-    "turn": "white" if board.turn == chess.WHITE else "black"
-})
+        "checkmate": board.is_checkmate(),
+        "stalemate": board.is_stalemate(),
+        "check":     board.is_check(),
+        "game_over": board.is_game_over(),
+        "turn":      "white" if board.turn == chess.WHITE else "black"
+    })
+
 
 @app.route("/board/reset", methods=["POST"])
 def reset():
     board.reset()
     return jsonify({"fen": board.fen()})
+
 
 @app.route("/board/history", methods=["GET"])
 def history():
@@ -46,172 +150,97 @@ def history():
         temp_board.push(move)
     return jsonify({"moves": moves})
 
+
 @app.route("/move", methods=["POST"])
 def move():
-    
     data = request.json
-  
-    move = data.get("move")
-
+    uci  = data.get("move")
     try:
-
-        board.push_uci(move)
-
-        return jsonify({
-            "fen": board.fen(),
-            "status": "ok"
-        })
-
+        chess_move = board.parse_uci(uci)
+        san        = board.san(chess_move)  
+        board.push(chess_move)
+        return jsonify({"fen": board.fen(), "status": "ok", "san": san})
     except ValueError:
-
-        return jsonify({
-            "error": "illegal move",
-            "status": "error"
-        }), 400
+        return jsonify({"error": "illegal move", "status": "error"}), 400
+ 
 
 @app.route("/board/hint", methods=["POST"])
 def get_hint():
-
-    url = "http://localhost:11434/api/generate"
     sf.set_fen_position(board.fen())
     best_move = sf.get_best_move()
 
-    prompt = f"""
-      You are a chess coach helping a beginner. Be brief and clear.
+    # NOTE: legal_san list removed — it bloated context and confused the model
+    # in complex positions. The position_context already tells the LLM everything
+    # it needs to reason about the board.
+    prompt = f"""You are an encouraging chess coach for beginners. Do not reveal the best move yet.
 
-    Current position FEN:  {fen_to_english(board.fen())}
+Recent moves: {get_recent_moves(board)}
+{position_context(board)}
 
-    Respond using EXACTLY this format with no deviations:
-    The objectively best move according to engine analysis is: {best_move}
-    Explain WHY this move is best in beginner-friendly terms.
-    HINT: [one sentence]
-    CONCEPTS: [one sentence]
-    BEST MOVE: {best_move}
-    EXPLANATION: [two sentences]
+Give a hint that guides the player toward finding the best move themselves.
+Respond with EXACTLY this format — no preamble, no extra text before or after:
 
-    Do not add any other text before or after.
-        
-    Example response:
-    HINT: Develop your knights before bishops.
-    CONCEPTS: Piece development is the priority in the opening.
-    BEST MOVE: Nf3
-    EXPLANATION: Nf3 develops a piece toward the center. It also prepares for castling kingside.
-    """
-
-    payload = {
-        "model": "mistral",
-        "prompt": prompt,
-        "stream": False
-    }
-    
+HINT: [one sentence — guide their thinking without naming the move]
+CONCEPT: [one sentence — name the chess idea involved, e.g. "fork", "pin", "development"]
+BEST MOVE: {best_move}
+EXPLANATION: [two sentences — why this move is strong in plain English]"""
 
     try:
+        data = ollama_post(prompt, temperature=0.3)
+        response_text = data["response"].strip()
 
-        response = requests.post(url, json=payload)
-        data = response.json()
-        
-        return jsonify({"hint": data["response"]})
+        # Ensure Stockfish's best move is preserved even if the model rewrote it
+        suggested = None
+        for line in response_text.splitlines():
+            if line.strip().upper().startswith("BEST MOVE:"):
+                suggested = line.split(":", 1)[-1].strip()
+                break
 
-    except Exception:
+        if suggested and suggested != best_move:
+            response_text = response_text.replace(suggested, best_move)
 
-        return jsonify({
-            "status": "error",
-            "error": "Could not connect to Ollama"
-        }), 500
+        return jsonify({"hint": response_text, "best_move": best_move})
+
+    except Exception as e:
+        return jsonify({"status": "error", "error": "Could not connect to Ollama"}), 500
+
 
 @app.route("/board/analyze", methods=["POST"])
 def analyze_board():
-    url = "http://localhost:11434/api/generate"
-
+    req   = request.json
+    move  = req.get("move")   
+    color = req.get("color")
+ 
+    prompt = f"""You are a friendly chess coach for beginners.
+ 
+{position_context(board)}
+Recent moves: {get_recent_moves(board)}
+ 
+{color.capitalize()} just played: {move}
+ 
+Looking only at the pieces and pawns listed above, in 2-3 sentences explain:
+1. What {move} does immediately on THIS board — which piece moved, what it captures or controls
+2. One concrete strength or weakness of this move given the current piece positions
+ 
+Do not mention pieces that are not in the piece list above.
+Do not suggest alternative moves.
+Write in plain, encouraging English."""
+ 
     try:
-        data = request.json
-
-        move = data.get("move")
-        fen = fen_to_english(board.fen())
-        color = data.get("color")
-
-
-        prompt = f"""
-        You are a chess coach AI.
-        A player has just made a move in a chess game.
-        Analyze ONLY the move that was just played, based on the current board position after the move.
-        You will receive:
-        The move played in UCI format (example: e2e4)
-        The current FEN position after the move
-        The color of the player who made the move ("white" or "black")
-        Your task:
-        Explain what the move does strategically or tactically
-        Mention whether it improves development, controls the center, attacks something, defends something, etc.
-        If the move has a weakness or mistake, explain it briefly
-        Keep the explanation beginner-friendly and concise
-        Do NOT suggest future moves unless necessary for explaining the idea
-        Do NOT analyze the entire game
-        Focus only on the move that was just played
-        Move: {move}
-        Color: {color}
-        FEN: {fen}
-        Example style of response:
-        "e4 is a strong opening move that controls the center and opens lines for the queen and bishop. It helps White develop pieces actively and fight for space early in the game."
-
-        Respond ONLY in valid plain text format
-        """
-
-        payload = {
-        "model": "mistral",
-        "prompt": prompt,
-        "stream": False
-    }
-        response = requests.post(url, json=payload)
-        ollama_data = response.json()
-        
-        return {"response": ollama_data["response"]}
-
-
+        data = ollama_post(prompt, temperature=0.2)
+        return jsonify({"response": data["response"].strip()})
     except Exception:
-        return jsonify({
-            "status": "error",
-            "error": "Could not connect to Ollama"
-        }), 500
-    
+        return jsonify({"status": "error", "error": "Could not connect to Ollama"}), 500
+ 
+
+
 @app.route("/board/undo", methods=["POST"])
 def undo_move():
     if len(board.move_stack) == 0:
         return jsonify({"error": "no moves to undo"}), 400
     board.pop()
-    return jsonify({
-        "fen":board.fen()
-    })
-
-def fen_to_english(fen):
-    turn_part = fen.split(" ")[1]
-    turn = "White" if turn_part == "w" else "Black"
-    files = "abcdefgh"
-    pieces = {"p": "pawn", "n": "knight", "b": "bishop", "r": "rook", "q": "queen", "k": "king"}
-    board_part = fen.split(" ")[0]
-    white = []
-    black = []
-    file = 0
-    rank = 7
-    for char in board_part:
-        if char == "/":
-            file = 0
-            rank -= 1
-        elif char.isdigit():
-            file += int(char)
-        else:
-            if char.islower():
-               square = files[file] + str(rank+1)
-               piece = pieces[char.lower()]
-               black.append(piece + " on " + square)
-            else: 
-               square = files[file] + str(rank + 1)
-               piece = pieces[char.lower()]
-               white.append(piece + " on " + square)
-            file += 1
-    return f"It is {turn}'s turn.\nWhite pieces: {', '.join(white)}\nBlack pieces: {', '.join(black)}" 
-
+    return jsonify({"fen": board.fen()})
 
 
 if __name__ == "__main__":
     app.run(debug=False)
-

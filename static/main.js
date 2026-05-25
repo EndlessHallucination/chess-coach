@@ -25,10 +25,13 @@ async function sendMove(source, target) {
         const data = await response.json()
         board.position(data.fen)
         updateStatus(data.fen)
-        const turn = data.fen.split(' ')[1]
         checkGameStatus()
+ 
+        const turn  = data.fen.split(' ')[1]
         const color = turn === 'w' ? 'black' : 'white'
-        lastMove = { move: source + target, fen: data.fen, color: color }
+ 
+        lastMove = { move: data.san, fen: data.fen, color: color }
+ 
         updateHistory()
     } catch (error) {
         console.error(error.message)
@@ -101,11 +104,11 @@ async function getHint() {
 }
 
 function parseHint(text) {
-    const parts = text.split(/HINT:|CONCEPTS:|BEST MOVE:|EXPLANATION:/)
+    const parts = text.split(/HINT:|CONCEPT:|BEST MOVE:|EXPLANATION:/)
     return {
-        hint: parts[1]?.trim() || '',
-        concepts: parts[2]?.trim() || '',
-        bestMove: parts[3]?.trim() || '',
+        hint:        parts[1]?.trim() || '',
+        concepts:    parts[2]?.trim() || '',
+        bestMove:    parts[3]?.trim() || '',
         explanation: parts[4]?.trim() || ''
     }
 }
@@ -137,8 +140,8 @@ function flipBoard() {
     board.flip()
 }
 
-async function updateHistory(){
-const url = "http://127.0.0.1:5000/board/history"
+async function updateHistory() {
+    const url = "http://127.0.0.1:5000/board/history"
     try {
         const response = await fetch(url, {
             method: "GET",
@@ -146,23 +149,23 @@ const url = "http://127.0.0.1:5000/board/history"
         })
         if (!response.ok) throw new Error("Response status: " + response.status)
         const data = await response.json()
-    moveString = ""
-    for (let i = 0; i < data.moves.length; i += 2) {
-        const white = data.moves[i]
-        const black = data.moves[i + 1] || ''
-        const moveNum = (i / 2) + 1
-        moveString += `${moveNum}. ${white} ${black}  `
-    }
-    document.getElementById('moveHistory').innerText = moveString
+        moveString = ""
+        for (let i = 0; i < data.moves.length; i += 2) {
+            const white = data.moves[i]
+            const black = data.moves[i + 1] || ''
+            const moveNum = (i / 2) + 1
+            moveString += `${moveNum}. ${white} ${black}  `
+        }
+        document.getElementById('moveHistory').innerText = moveString
     } catch (error) {
         console.error(error.message)
     }
 }
 
 async function undoMove() {
-     const url = "http://127.0.0.1:5000/board/undo"
-     try {
-        const response = await fetch(url, {method: "POST"})
+    const url = "http://127.0.0.1:5000/board/undo"
+    try {
+        const response = await fetch(url, { method: "POST" })
         if (!response.ok) throw new Error("Response status: " + response.status)
         const data = await response.json()
         board.position(data.fen)
@@ -171,9 +174,9 @@ async function undoMove() {
         const turn = data.fen.split(' ')[1]
         const color = turn === 'w' ? 'black' : 'white'
         lastMove = { move: null, fen: data.fen, color: color }
-     } catch (error) {
+    } catch (error) {
         console.error(error.message)
-     }
+    }
 }
 
 async function checkGameStatus() {
