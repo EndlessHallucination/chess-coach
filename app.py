@@ -3,6 +3,7 @@ import chess
 import requests
 from stockfish import Stockfish
 
+# ⚠️ Set this to your local Stockfish binary path
 sf = Stockfish(path="/opt/homebrew/bin/stockfish")
 app = Flask(__name__)
 
